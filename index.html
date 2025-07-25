@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Returns Simulator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .input-section {
+            background: rgba(52, 152, 219, 0.05);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border: 1px solid rgba(52, 152, 219, 0.1);
+        }
+
+        .input-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            position: relative;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 0.95rem;
+        }
+
+        .input-group input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e6ed;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+            transform: translateY(-1px);
+        }
+
+        .generate-btn {
+            background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 8px 25px rgba(46, 204, 113, 0.3);
+        }
+
+        .generate-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(46, 204, 113, 0.4);
+        }
+
+        .generate-btn:active {
+            transform: translateY(-1px);
+        }
+
+        .graph-section {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .graph-container {
+            position: relative;
+            height: 400px;
+            margin-top: 20px;
+        }
+
+        .download-section {
+            text-align: center;
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, #8e44ad 0%, #9b59b6 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1rem;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            box-shadow: 0 8px 25px rgba(142, 68, 173, 0.3);
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(142, 68, 173, 0.4);
+        }
+
+        .download-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .error-message {
+            background: #e74c3c;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .input-section {
+                padding: 20px;
+            }
+            
+            .graph-container {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Market Returns Simulator</h1>
+            <p>Simulate realistic market returns with volatility over time</p>
+        </div>
+        
+        <div class="content">
+            <div class="input-section">
+                <div class="error-message" id="errorMessage"></div>
+                
+                <div class="input-grid">
+                    <div class="input-group">
+                        <label for="cagr">Compound Annual Growth Rate (CAGR) %</label>
+                        <input type="number" id="cagr" placeholder="e.g., 10" step="0.1" value="10">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="years">Simulation Period (Years)</label>
+                        <input type="number" id="years" placeholder="e.g., 20" min="1" max="50" value="20">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="volatility">Volatility (Standard Deviation) %</label>
+                        <input type="number" id="volatility" placeholder="Default: 18" step="0.1" value="18">
+                    </div>
+                    
+                    <div class="input-group">
+                        <label for="initialInvestment">Initial Investment Amount ($)</label>
+                        <input type="number" id="initialInvestment" placeholder="Default: 10,000" step="100" value="10000">
+                    </div>
+                </div>
+                
+                <button class="generate-btn" onclick="generateSimulation()">Generate Simulation</button>
+            </div>
+            
+            <div class="graph-section">
+                <div class="stats-grid" id="statsGrid" style="display: none;">
+                    <div class="stat-card">
+                        <div class="stat-value" id="finalValue">$0</div>
+                        <div class="stat-label">Final Value</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalReturn">0%</div>
+                        <div class="stat-label">Total Return</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="actualCAGR">0%</div>
+                        <div class="stat-label">Target CAGR</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="worstYear">0%</div>
+                        <div class="stat-label">Worst Year</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="bestYear">0%</div>
+                        <div class="stat-label">Best Year</div>
+                    </div>
+                </div>
+                
+                <div class="graph-container">
+                    <canvas id="returnsChart"></canvas>
+                </div>
+            </div>
+            
+            <div class="download-section">
+                <button class="download-btn" id="downloadBtn" onclick="downloadCSV()" disabled>
+                    Download Data (CSV)
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let simulationData = [];
+        let chart = null;
+
+        function generateSimulation() {
+            document.getElementById('errorMessage').style.display = 'none';
+            
+            const cagr = parseFloat(document.getElementById('cagr').value);
+            const years = parseInt(document.getElementById('years').value);
+            const volatility = parseFloat(document.getElementById('volatility').value);
+            const initialInvestment = parseFloat(document.getElementById('initialInvestment').value);
+            
+            if (isNaN(cagr) || isNaN(years) || isNaN(volatility) || isNaN(initialInvestment)) {
+                showError('Please enter valid numerical values for all fields.');
+                return;
+            }
+            
+            if (years <= 0 || years > 50) {
+                showError('Simulation period must be between 1 and 50 years.');
+                return;
+            }
+            
+            if (initialInvestment <= 0) {
+                showError('Initial investment must be greater than 0.');
+                return;
+            }
+            
+            if (volatility < 0) {
+                showError('Volatility cannot be negative.');
+                return;
+            }
+            
+            simulationData = [];
+            let cumulativeMultiplier = 1;
+            
+            simulationData.push({
+                year: 0,
+                annualChange: 0,
+                cumulativeReturn: initialInvestment,
+                cumulativeMultiplier: 1
+            });
+            
+            const mu = (cagr / 100) - 0.5 * Math.pow(volatility / 100, 2);
+            
+            for (let year = 1; year <= years; year++) {
+                const z = generateNormalRandom();
+                const annualReturnFactor = Math.exp(mu + (volatility / 100) * z);
+                const annualChange = (annualReturnFactor - 1) * 100;
+                cumulativeMultiplier *= annualReturnFactor;
+                const cumulativeReturn = initialInvestment * cumulativeMultiplier;
+                
+                simulationData.push({
+                    year: year,
+                    annualChange: annualChange,
+                    cumulativeReturn: cumulativeReturn,
+                    cumulativeMultiplier: cumulativeMultiplier
+                });
+            }
+            
+            updateChart();
+            updateStats();
+            
+            document.getElementById('downloadBtn').disabled = false;
+            document.getElementById('statsGrid').style.display = 'grid';
+        }
+        
+        function generateNormalRandom() {
+            let u = 0, v = 0;
+            while(u === 0) u = Math.random();
+            while(v === 0) v = Math.random();
+            return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+        }
+        
+        function updateChart() {
+            const ctx = document.getElementById('returnsChart').getContext('2d');
+            
+            if (chart) {
+                chart.destroy();
+            }
+            
+            const labels = simulationData.map(d => d.year);
+            const data = simulationData.map(d => d.cumulativeReturn);
+            
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Cumulative Returns ($)',
+                        data: data,
+                        borderColor: '#3498db',
+                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.1,
+                        pointBackgroundColor: '#3498db',
+                        pointBorderColor: '#ffffff',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Market Returns Simulation',
+                            font: {
+                                size: 18,
+                                weight: 'bold'
+                            },
+                            color: '#2c3e50'
+                        },
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleColor: 'white',
+                            bodyColor: 'white',
+                            borderColor: '#3498db',
+                            borderWidth: 1,
+                            callbacks: {
+                                title: function(context) {
+                                    return 'Year ' + context[0].label;
+                                },
+                                label: function(context) {
+                                    const dataPoint = simulationData[context.dataIndex];
+                                    const value = '$' + dataPoint.cumulativeReturn.toLocaleString(undefined, {maximumFractionDigits: 0});
+                                    const change = dataPoint.year === 0 ? '0.0%' : dataPoint.annualChange.toFixed(1) + '%';
+                                    return [
+                                        'Value: ' + value,
+                                        'Annual Change: ' + change
+                                    ];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Years',
+                                font: {
+                                    weight: 'bold'
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Cumulative Returns ($)',
+                                font: {
+                                    weight: 'bold'
+                                }
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + value.toLocaleString();
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            }
+                        }
+                    },
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    }
+                }
+            });
+        }
+        
+        function updateStats() {
+            const finalData = simulationData[simulationData.length - 1];
+            const initialInvestment = simulationData[0].cumulativeReturn;
+            const inputCAGR = parseFloat(document.getElementById('cagr').value);
+            
+            const finalValue = finalData.cumulativeReturn;
+            const totalReturn = ((finalValue - initialInvestment) / initialInvestment) * 100;
+            
+            const annualChanges = simulationData.slice(1).map(d => d.annualChange);
+            const worstYear = Math.min(...annualChanges);
+            const bestYear = Math.max(...annualChanges);
+            
+            document.getElementById('finalValue').textContent = '$' + finalValue.toLocaleString(undefined, {maximumFractionDigits: 0});
+            document.getElementById('totalReturn').textContent = totalReturn.toFixed(1) + '%';
+            document.getElementById('actualCAGR').textContent = inputCAGR.toFixed(1) + '%';
+            document.getElementById('worstYear').textContent = worstYear.toFixed(1) + '%';
+            document.getElementById('bestYear').textContent = bestYear.toFixed(1) + '%';
+        }
+        
+        function downloadCSV() {
+            if (simulationData.length === 0) {
+                showError('No simulation data to download. Please generate a simulation first.');
+                return;
+            }
+            
+            let csvContent = 'Year,Annual Change %,Cumulative Returns\n';
+            
+            simulationData.forEach(row => {
+                csvContent += row.year + ',' + row.annualChange.toFixed(2) + ',' + row.cumulativeReturn.toFixed(2) + '\n';
+            });
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', 'market_returns_simulation.csv');
+            link.style.visibility = 'hidden';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            URL.revokeObjectURL(url);
+        }
+        
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+        
+        window.addEventListener('load', function() {
+            generateSimulation();
+        });
+    </script>
+</body>
+</html>
