@@ -294,78 +294,108 @@
     </div>
 
     <script>
-        let simulationData = [];
-        let chart = null;
+let simulationData = [];
+let chart = null; // Assuming 'chart' is your Chart.js instance
 
-        function generateSimulation() {
-            document.getElementById('errorMessage').style.display = 'none';
-            
-            const cagr = parseFloat(document.getElementById('cagr').value);
-            const years = parseInt(document.getElementById('years').value);
-            const volatility = parseFloat(document.getElementById('volatility').value);
-            const initialInvestment = parseFloat(document.getElementById('initialInvestment').value);
-            
-            if (isNaN(cagr) || isNaN(years) || isNaN(volatility) || isNaN(initialInvestment)) {
-                showError('Please enter valid numerical values for all fields.');
-                return;
-            }
-            
-            if (years <= 0 || years > 50) {
-                showError('Simulation period must be between 1 and 50 years.');
-                return;
-            }
-            
-            if (initialInvestment <= 0) {
-                showError('Initial investment must be greater than 0.');
-                return;
-            }
-            
-            if (volatility < 0) {
-                showError('Volatility cannot be negative.');
-                return;
-            }
-            
-            simulationData = [];
-            let cumulativeMultiplier = 1;
-            
-            simulationData.push({
-                year: 0,
-                annualChange: 0,
-                cumulativeReturn: initialInvestment,
-                cumulativeMultiplier: 1
-            });
-            
-            const mu = (cagr / 100) - 0.5 * Math.pow(volatility / 100, 2);
-            
-            for (let year = 1; year <= years; year++) {
-                const z = generateNormalRandom();
-                const annualReturnFactor = Math.exp(mu + (volatility / 100) * z);
-                const annualChange = (annualReturnFactor - 1) * 100;
-                cumulativeMultiplier *= annualReturnFactor;
-                const cumulativeReturn = initialInvestment * cumulativeMultiplier;
-                
-                simulationData.push({
-                    year: year,
-                    annualChange: annualChange,
-                    cumulativeReturn: cumulativeReturn,
-                    cumulativeMultiplier: cumulativeMultiplier
-                });
-            }
-            
-            updateChart();
-            updateStats();
-            
-            document.getElementById('downloadBtn').disabled = false;
-            document.getElementById('statsGrid').style.display = 'grid';
-        }
-        
-        function generateNormalRandom() {
-            let u = 0, v = 0;
-            while(u === 0) u = Math.random();
-            while(v === 0) v = Math.random();
-            return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
-        }
-        
+function generateSimulation() {
+    document.getElementById('errorMessage').style.display = 'none';
+
+    const cagr = parseFloat(document.getElementById('cagr').value);
+    const years = parseInt(document.getElementById('years').value);
+    const volatility = parseFloat(document.getElementById('volatility').value);
+    const initialInvestment = parseFloat(document.getElementById('initialInvestment').value);
+
+    if (isNaN(cagr) || isNaN(years) || isNaN(volatility) || isNaN(initialInvestment)) {
+        showError('Please enter valid numerical values for all fields.');
+        return;
+    }
+
+    if (years <= 0 || years > 50) {
+        showError('Simulation period must be between 1 and 50 years.');
+        return;
+    }
+
+    if (initialInvestment <= 0) {
+        showError('Initial investment must be greater than 0.');
+        return;
+    }
+
+    if (volatility < 0) {
+        showError('Volatility cannot be negative.');
+        return;
+    }
+
+    simulationData = [];
+    let cumulativeMultiplier = 1;
+
+    simulationData.push({
+        year: 0,
+        annualChange: 0,
+        cumulativeReturn: initialInvestment,
+        cumulativeMultiplier: 1
+    });
+
+    const mu = (cagr / 100) - 0.5 * Math.pow(volatility / 100, 2);
+
+    // Simulate for 'years - 1' to leave the last year for adjustment
+    for (let year = 1; year < years; year++) { // Changed loop condition to '< years'
+        const z = generateNormalRandom();
+        const annualReturnFactor = Math.exp(mu + (volatility / 100) * z);
+        const annualChange = (annualReturnFactor - 1) * 100;
+        cumulativeMultiplier *= annualReturnFactor;
+        const cumulativeReturn = initialInvestment * cumulativeMultiplier;
+
+        simulationData.push({
+            year: year,
+            annualChange: annualChange,
+            cumulativeReturn: cumulativeReturn,
+            cumulativeMultiplier: cumulativeMultiplier
+        });
+    }
+
+    // --- Adjust the last year to ensure target CAGR is met ---
+    const targetFinalCumulativeValue = initialInvestment * Math.pow(1 + cagr / 100, years);
+    const cumulativeReturnBeforeLastYear = simulationData[simulationData.length - 1].cumulativeReturn;
+    const cumulativeMultiplierBeforeLastYear = simulationData[simulationData.length - 1].cumulativeMultiplier;
+
+    // Calculate the required annual return factor for the last year
+    let annualReturnFactorForLastYear;
+    if (cumulativeReturnBeforeLastYear === 0) {
+        // Handle case where cumulative return becomes zero before the last year
+        // This might happen with extreme negative volatility.
+        // Forcing to target value from zero might lead to infinite returns.
+        // A practical approach could be to just set it to the target, or clip.
+        annualReturnFactorForLastYear = targetFinalCumulativeValue / initialInvestment; // Reset multiplier from initial
+    } else {
+        annualReturnFactorForLastYear = targetFinalCumulativeValue / cumulativeReturnBeforeLastYear;
+    }
+    
+    const annualChangeForLastYear = (annualReturnFactorForLastYear - 1) * 100;
+    const finalCumulativeMultiplier = cumulativeMultiplierBeforeLastYear * annualReturnFactorForLastYear;
+    const finalCumulativeReturn = initialInvestment * finalCumulativeMultiplier;
+
+    // Add the adjusted last year's data
+    simulationData.push({
+        year: years, // This is now the final year
+        annualChange: annualChangeForLastYear,
+        cumulativeReturn: finalCumulativeReturn,
+        cumulativeMultiplier: finalCumulativeMultiplier
+    });
+    // --- End of adjustment ---
+
+    updateChart();
+    updateStats(); // Make sure updateStats handles the new data structure
+
+    document.getElementById('downloadBtn').disabled = false;
+    document.getElementById('statsGrid').style.display = 'grid';
+}
+
+function generateNormalRandom() {
+    let u = 0, v = 0;
+    while(u === 0) u = Math.random();
+    while(v === 0) v = Math.random();
+    return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+}
         function updateChart() {
             const ctx = document.getElementById('returnsChart').getContext('2d');
             
